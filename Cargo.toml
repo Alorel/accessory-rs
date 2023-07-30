@@ -1,0 +1,31 @@
+[package]
+name = "field_access"
+version = "0.1.0"
+edition = "2021"
+publish = false
+rust-version = "1.56.0"
+authors = [
+  "Art <amolc@pm.me>",
+]
+license = "Apache-2.0"
+readme = "README.md"
+
+description = "A configurable get/set/get_mut derive macro"
+
+repository = "https://github.com/Alorel/field_access-rs"
+keywords = []
+categories = []
+include = [
+  "src/",
+  "Cargo.toml",
+]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1"
+syn = "2"
+quote = "1"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
