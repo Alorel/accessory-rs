@@ -1,0 +1,27 @@
+name: Release
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_INCREMENTAL: 0
+  RUSTFLAGS: --deny warnings
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Init toolchain
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{matrix.toolchain}}
+      - name: Test
+        run: cargo test --workspace --locked
+      - name: Publish
+        run: cargo publish --locked --token ${{ secrets.CRATES_IO_TOKEN }}

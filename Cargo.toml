@@ -1,9 +1,9 @@
 [package]
-name = "field_access"
-version = "0.1.0"
+name = "accessory"
+version = "1.0.0"
 edition = "2021"
 publish = false
-rust-version = "1.56.0"
+rust-version = "1.60.0"
 authors = [
   "Art <amolc@pm.me>",
 ]
@@ -12,20 +12,25 @@ readme = "README.md"
 
 description = "A configurable get/set/get_mut derive macro"
 
-repository = "https://github.com/Alorel/field_access-rs"
-keywords = []
-categories = []
+repository = "https://github.com/Alorel/accessory-rs"
+keywords = ["derive", "macro", "getters", "setters"]
+categories = ["development-tools"]
 include = [
   "src/",
   "Cargo.toml",
 ]
 
+[features]
+_debug = ["syn/extra-traits"]
+nightly = ["macroific/nightly"]
+
 [lib]
 proc-macro = true
 
 [dependencies]
+macroific = {version = "^1.0.1", features = ["attr_parse", "full"]}
 proc-macro2 = "1"
-syn = "2"
+syn = { version = "2"}
 quote = "1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

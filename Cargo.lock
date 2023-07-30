@@ -3,9 +3,63 @@
 version = 3
 
 [[package]]
-name = "field_access"
-version = "0.1.0"
+name = "accessory"
+version = "1.0.0"
 dependencies = [
+ "macroific",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "cfg-if"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
+name = "macroific"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0f87f5ad0d36a32134699d0857e573659640f26bfa400f190e21404242035ca"
+dependencies = [
+ "macroific_attr_parse",
+ "macroific_core",
+ "macroific_macro",
+]
+
+[[package]]
+name = "macroific_attr_parse"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "766aa73fc360b6bc09071dd0d4bf8390113b9a4f15ae846c23c219fa7b7bd050"
+dependencies = [
+ "cfg-if",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "macroific_core"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30044c3845fc57e4743fbd9781ca8d3564c7837f024782b1905cc5cdd4a35bd2"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "macroific_macro"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92e7248aa93f5089787fdaceda7c9f8ae972fee91626634f519fa2f8271ed334"
+dependencies = [
+ "macroific_attr_parse",
+ "macroific_core",
  "proc-macro2",
  "quote",
  "syn",

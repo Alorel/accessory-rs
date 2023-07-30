@@ -45,21 +45,36 @@ jobs:
           components: rustfmt,clippy
       - name: Fmt
         run: cargo fmt --check
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: v2-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-${{ hashFiles('**/Cargo.lock') }}-lint-
+          restore-keys: |
+            v2-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-${{ hashFiles('**/Cargo.lock') }}-test
+            v2-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-
+            v2-cargo-${{runner.os}}
       - name: Clippy
-        run: clippy --workspace --tests --all-features --locked
+        run: cargo clippy --workspace --tests
+      - name: Install cargo-rdme
+        continue-on-error: true
+        run: cargo install cargo-rdme --debug --version ^1
+      - name: Run cargo-rdme
+        run: cargo rdme --check --no-fail-on-warnings
   test:
-    name: Rust ${{matrix.toolchain}} on ${{matrix.os}}
-    runs-on: ${{matrix.os}}
+    name: Rust ${{matrix.toolchain}}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        os:
-#          - windows-latest
-#          - macos-latest
-          - ubuntu-latest
         toolchain:
           - stable
-          - 1.56.0 # min supported by 2021 edition
+          - 1.60.0
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -77,9 +92,10 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: v1-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: v1-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-
-      - name: Build
-        run: cargo build --workspace --tests --locked
+          key: v2-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-${{ hashFiles('**/Cargo.lock') }}-test-
+          restore-keys: |
+            v2-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-${{ hashFiles('**/Cargo.lock') }}-lint
+            v2-cargo-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}-
+            v2-cargo-${{runner.os}}
       - name: Test
         run: cargo test --workspace --locked
