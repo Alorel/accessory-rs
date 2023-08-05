@@ -4,6 +4,7 @@ use proc_macro2::Ident;
 use syn::spanned::Spanned;
 use syn::{Attribute, Field};
 
+#[cfg_attr(feature = "_debug", derive(Debug))]
 pub struct ParsedField {
     pub comments: Vec<Attribute>,
     pub opts: FieldOptions,

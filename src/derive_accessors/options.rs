@@ -1,6 +1,7 @@
 use macroific::prelude::*;
 use proc_macro2::Ident;
-use syn::{Expr, Visibility};
+use syn::parse::{Parse, ParseStream};
+use syn::{Expr, LitStr, Visibility};
 
 #[derive(AttributeOptions)]
 #[cfg_attr(feature = "_debug", derive(Debug))]
@@ -39,8 +40,8 @@ pub struct VariationOptions {
     pub skip: Option<bool>,
     pub cp: Option<bool>,
     pub ty: Option<syn::Type>,
-    pub prefix: Option<Ident>,
-    pub suffix: Option<Ident>,
+    pub prefix: Option<SkippableIdent>,
+    pub suffix: Option<SkippableIdent>,
     pub vis: Option<Visibility>,
 }
 
@@ -50,8 +51,8 @@ pub struct VariationDefaults {
     pub owned: Option<bool>,
     pub const_fn: Option<bool>,
     pub cp: Option<bool>,
-    pub prefix: Option<Ident>,
-    pub suffix: Option<Ident>,
+    pub prefix: Option<SkippableIdent>,
+    pub suffix: Option<SkippableIdent>,
     pub vis: Option<Visibility>,
 }
 
@@ -111,5 +112,86 @@ impl VariationOptions {
             assign_defaults!(cp self defaults => owned, const_fn, cp);
             assign_defaults!(clone self defaults => prefix, suffix, vis);
         }
+    }
+}
+
+#[derive(Clone)]
+#[cfg_attr(feature = "_debug", derive(Debug))]
+pub enum SkippableIdent {
+    Ident(Ident),
+    Skip,
+}
+
+impl FromExpr for SkippableIdent {
+    fn from_expr(expr: Expr) -> syn::Result<Self> {
+        Ok(Self::Ident(Ident::from_expr(expr)?))
+    }
+}
+
+impl Parse for SkippableIdent {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        if input.peek(syn::Lit) {
+            let lit: LitStr = input.parse()?;
+            if lit.value().is_empty() {
+                Ok(Self::Skip)
+            } else {
+                Err(syn::Error::new_spanned(lit, "Expected empty string"))
+            }
+        } else {
+            Ok(Self::Ident(input.parse()?))
+        }
+    }
+}
+
+const _: () = {
+    use std::fmt::{Display, Formatter, Result, Write};
+    #[derive(Copy, Clone)]
+    struct Renderer<'a> {
+        ident: &'a SkippableIdent,
+        is_prefix: bool,
+    }
+
+    impl Display for Renderer<'_> {
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+            const CHAR: char = '_';
+
+            match self.ident {
+                SkippableIdent::Skip => Ok(()),
+                SkippableIdent::Ident(ident) => {
+                    if self.is_prefix {
+                        Display::fmt(ident, f)?;
+                        f.write_char(CHAR)
+                    } else {
+                        f.write_char(CHAR)?;
+                        Display::fmt(ident, f)
+                    }
+                }
+            }
+        }
+    }
+
+    impl SkippableIdent {
+        #[inline]
+        pub fn as_suffix(&self) -> impl Display + Copy + Clone + '_ {
+            Renderer {
+                ident: self,
+                is_prefix: false,
+            }
+        }
+
+        #[inline]
+        pub fn as_prefix(&self) -> impl Display + Copy + Clone + '_ {
+            Renderer {
+                ident: self,
+                is_prefix: true,
+            }
+        }
+    }
+};
+
+impl ParseOption for SkippableIdent {
+    #[inline]
+    fn from_stream(input: ParseStream) -> syn::Result<Self> {
+        input.parse()
     }
 }
