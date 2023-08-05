@@ -1,7 +1,7 @@
 use macroific::elements::SimpleAttr;
 use macroific::prelude::*;
 use proc_macro2::{Delimiter, Group, Ident, TokenStream};
-use quote::{format_ident, quote, ToTokens, TokenStreamExt};
+use quote::{quote, ToTokens, TokenStreamExt};
 use syn::parse::{Parse, ParseStream};
 use syn::{Attribute, DeriveInput, Generics, Token, Type};
 
@@ -135,9 +135,9 @@ fn render_common(
     tokens.append(Ident::create("fn"));
 
     tokens.append(match (&opts.prefix, &opts.suffix) {
-        (Some(p), Some(s)) => format_ident!("{p}_{ident}_{s}"),
-        (Some(p), None) => format_ident!("{p}_{ident}"),
-        (None, Some(s)) => format_ident!("{ident}_{s}"),
+        (Some(p), Some(s)) => Ident::create(&format!("{}{ident}{}", p.as_prefix(), s.as_suffix())),
+        (Some(p), None) => Ident::create(&format!("{}{ident}", p.as_prefix())),
+        (None, Some(s)) => Ident::create(&format!("{ident}{}", s.as_suffix())),
         (None, None) => ident.clone(),
     });
 }
@@ -175,6 +175,9 @@ const RENDER_GET: RenderFieldFn = |ident, ty, opts| {
     }
 };
 const RENDER_GET_MUT: RenderFieldFn = |ident, ty, opts| {
+    #[cfg(feature = "_debug")]
+    println!("Getmutting {ident}: {} | {:?}", ty.to_token_stream(), opts);
+
     let fn_return = if let Some(ty) = opts.ty {
         ty.into_token_stream()
     } else {

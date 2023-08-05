@@ -143,13 +143,17 @@
 //! You can modify function return types & names
 //!
 //! ```
-//! #[derive(accessory::Accessors)]
+//! #[derive(Default, accessory::Accessors)]
 //! #[access(defaults(get(prefix(get))))]
 //! struct Structopher {
-//!     #[access(get(suffix(right_now), ty(&str)))]
+//!     #[access(
+//!       get(suffix(right_now), ty(&str)), // set the suffix and type
+//!       get_mut(suffix("")) // remove the inherited suffix set by `get_mut`
+//!     )]
 //!     good: String,
 //! }
-//! let inst = Structopher { good: "On it, chief".to_string() };
+//! let mut inst = Structopher::default();
+//! *inst.good() = "On it, chief".into();
 //! assert_eq!(inst.get_good_right_now(), "On it, chief");
 //! ```
 //!
@@ -160,6 +164,8 @@
 //! impl Structopher {
 //!     #[inline]
 //!     pub fn get_good_right_now(&self) -> &str { &self.good }
+//!     #[inline]
+//!     pub fn good(&mut self) -> &mut String { &mut self.good }
 //! }
 //! ````
 //!
@@ -173,6 +179,8 @@
     clippy::default_trait_access
 )]
 #![warn(missing_docs)]
+
+extern crate core;
 
 mod derive_accessors;
 
@@ -191,8 +199,8 @@ use quote::ToTokens;
 /// | `skip` | Skip this accessor |
 /// | `vis(visibility)` | Set the visibility of the accessor. Defaults to public. |
 /// | `ty(type)` | Set the return type of the accessor. Defaults to the field type + a reference if applicable. |
-/// | `prefix(prefix)` | Add a prefix to the accessor name |
-/// | `suffix(suffix)` | Add a suffix to the accessor name |
+/// | `prefix(prefix)` | [`Ident`](syn::Ident): Add a prefix to the accessor name, [`""`](syn::LitStr): remove the inherited prefix |
+/// | `suffix(suffix)` | [`Ident`](syn::Ident): Add a suffix to the accessor name, [`""`](syn::LitStr): remove the inherited suffix |
 ///
 /// # Field Options
 ///

@@ -1,20 +1,23 @@
+use super::options::SkippableIdent;
 use macroific::prelude::*;
 use proc_macro2::Ident;
 use syn::Visibility;
 
 use super::{VariationDefaults, VariationOptions};
 
+#[cfg_attr(feature = "_debug", derive(Debug))]
 pub struct FinalOptions {
     pub owned: bool,
     pub const_fn: bool,
     pub skip: bool,
     pub cp: bool,
     pub vis: Visibility,
-    pub prefix: Option<Ident>,
-    pub suffix: Option<Ident>,
+    pub prefix: Option<SkippableIdent>,
+    pub suffix: Option<SkippableIdent>,
     pub ty: Option<syn::Type>,
 }
 
+#[cfg_attr(feature = "_debug", derive(Debug))]
 pub struct Naming {
     pub prefix: Option<&'static str>,
     pub suffix: Option<&'static str>,
@@ -89,12 +92,12 @@ impl FinalOptions {
     pub fn apply_naming_defaults(&mut self, defaults: &'static Naming) {
         if self.prefix.is_none() {
             if let Some(v) = defaults.prefix {
-                self.prefix = Some(Ident::create(v));
+                self.prefix = Some(SkippableIdent::Ident(Ident::create(v)));
             }
         }
         if self.suffix.is_none() {
             if let Some(v) = defaults.suffix {
-                self.suffix = Some(Ident::create(v));
+                self.suffix = Some(SkippableIdent::Ident(Ident::create(v)));
             }
         }
     }
