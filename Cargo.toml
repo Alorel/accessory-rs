@@ -1,6 +1,6 @@
 [package]
 name = "accessory"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 rust-version = "1.60.0"
 authors = [
@@ -27,7 +27,7 @@ nightly = ["macroific/nightly"]
 proc-macro = true
 
 [dependencies]
-macroific = {version = "^1.0.1", features = ["attr_parse", "full"]}
+macroific = {version = "1.0.1", features = ["attr_parse", "full"]}
 proc-macro2 = "1"
 syn = { version = "2"}
 quote = "1"
