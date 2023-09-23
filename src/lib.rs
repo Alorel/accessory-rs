@@ -169,6 +169,31 @@
 //! }
 //! ````
 //!
+//! ## Generic bounds
+//!
+//! ```
+//! #[derive(Default, accessory::Accessors)]
+//! #[access(bounds(World: PartialEq))] // applies to the impl block
+//! struct Hello<World> {
+//!   #[access(get(cp, bounds(World: Copy)))] // Applies to specific accessor
+//!   world: World,
+//! }
+//!
+//! let world: u8 = Hello { world: 10u8 }.world();
+//! assert_eq!(world, 10);
+//! ```
+//!
+//! ### Generated output
+//!
+#![cfg_attr(doctest, doc = " ````no_test")]
+//! ```
+//! impl<World> Hello<World> where World: PartialEq {
+//!   #[inline]
+//!   pub fn world(&self) -> World where World: Copy {
+//!     self.world
+//!   }
+//! }
+//! ````
 
 #![deny(clippy::correctness, clippy::suspicious)]
 #![warn(clippy::complexity, clippy::perf, clippy::style, clippy::pedantic)]
@@ -199,8 +224,9 @@ use quote::ToTokens;
 /// | `skip` | Skip this accessor |
 /// | `vis(visibility)` | Set the visibility of the accessor. Defaults to public. |
 /// | `ty(type)` | Set the return type of the accessor. Defaults to the field type + a reference if applicable. |
-/// | `prefix(prefix)` | [`Ident`](syn::Ident): Add a prefix to the accessor name, [`""`](syn::LitStr): remove the inherited prefix |
-/// | `suffix(suffix)` | [`Ident`](syn::Ident): Add a suffix to the accessor name, [`""`](syn::LitStr): remove the inherited suffix |
+/// | `prefix(prefix)` | [`Ident`](struct@syn::Ident): Add a prefix to the accessor name, [`""`](struct@syn::LitStr): remove the inherited prefix |
+/// | `suffix(suffix)` | [`Ident`](struct@syn::Ident): Add a suffix to the accessor name, [`""`](struct@syn::LitStr): remove the inherited suffix |
+/// | `bounds(A: B + C, D: E)` | Add this `where` clause to this accessor implementation |
 ///
 /// # Field Options
 ///
@@ -223,6 +249,7 @@ use quote::ToTokens;
 /// | `get_mut` | Derive a `get_mut` accessor for each field |
 /// | `set` | Derive a `set` accessor for each field |
 /// | `defaults(ContainerDefaults)` | Set default options |
+/// | `bounds(A: B + C, D: E)` | Add this `where` clause to the `impl` block |
 ///
 /// ## `ContainerDefaults`
 ///

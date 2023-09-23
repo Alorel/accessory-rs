@@ -168,4 +168,29 @@ impl Structopher {
 }
 ````
 
+## Generic bounds
+
+```rust
+#[derive(Default, accessory::Accessors)]
+#[access(bounds(World: PartialEq))] // applies to the impl block
+struct Hello<World> {
+  #[access(get(cp, bounds(World: Copy)))] // Applies to specific accessor
+  world: World,
+}
+
+let world: u8 = Hello { world: 10u8 }.world();
+assert_eq!(world, 10);
+```
+
+### Generated output
+
+```rust
+impl<World> Hello<World> where World: PartialEq {
+  #[inline]
+  pub fn world(&self) -> World where World: Copy {
+    self.world
+  }
+}
+````
+
 <!-- cargo-rdme end -->

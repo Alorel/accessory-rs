@@ -1,8 +1,9 @@
-use super::options::SkippableIdent;
 use macroific::prelude::*;
 use proc_macro2::Ident;
-use syn::Visibility;
+use syn::punctuated::Punctuated;
+use syn::{Token, Visibility};
 
+use super::options::{SkippableIdent, WhereParam};
 use super::{VariationDefaults, VariationOptions};
 
 #[cfg_attr(feature = "_debug", derive(Debug))]
@@ -15,6 +16,7 @@ pub struct FinalOptions {
     pub prefix: Option<SkippableIdent>,
     pub suffix: Option<SkippableIdent>,
     pub ty: Option<syn::Type>,
+    pub bounds: Punctuated<WhereParam, Token![,]>,
 }
 
 #[cfg_attr(feature = "_debug", derive(Debug))]
@@ -83,6 +85,7 @@ impl FinalOptions {
             prefix: opts.prefix,
             suffix: opts.suffix,
             ty: opts.ty,
+            bounds: opts.bounds,
         };
         out.apply_naming_defaults(defaults_for_variation);
 

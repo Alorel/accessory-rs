@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Clippy: fix" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
-    <option name="command" value="clippy --workspace --tests --fix" />
+    <option name="command" value="clippy --workspace --tests --fix --allow-staged --allow-dirty" />
     <option name="workingDirectory" value="file://$PROJECT_DIR$" />
     <option name="emulateTerminal" value="true" />
     <option name="channel" value="DEFAULT" />
