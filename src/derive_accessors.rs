@@ -3,7 +3,8 @@ use macroific::prelude::*;
 use proc_macro2::{Delimiter, Group, Ident, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt};
 use syn::parse::{Parse, ParseStream};
-use syn::{Attribute, DeriveInput, Generics, Token, Type};
+use syn::punctuated::Punctuated;
+use syn::{Attribute, DeriveInput, Generics, Token, Type, WherePredicate};
 
 use options::*;
 use parsed_field::*;
@@ -78,10 +79,19 @@ impl ToTokens for DeriveAccessors {
             fields,
             container_opts,
             ident,
-            generics,
+            mut generics,
         } = self;
 
         let mut out = {
+            if !container_opts.bounds.is_empty() {
+                generics.make_where_clause().predicates.extend(
+                    container_opts
+                        .bounds
+                        .into_iter()
+                        .map(Into::<WherePredicate>::into),
+                );
+            }
+
             let (g1, g2, g3) = generics.split_for_impl();
             quote! {
                 #[automatically_derived]
@@ -150,6 +160,22 @@ fn arg_ref(owned: bool) -> Option<Token![&]> {
     }
 }
 
+fn mk_where<T, P>(bounds: Punctuated<T, P>) -> Option<TokenStream>
+where
+    T: ToTokens,
+    P: ToTokens,
+{
+    if bounds.is_empty() {
+        None
+    } else {
+        let bounds = bounds.into_token_stream();
+        let mut out = TokenStream::new();
+        out.append(Ident::create("where"));
+        out.extend(bounds);
+        Some(out)
+    }
+}
+
 type RenderFieldFn = fn(&Ident, &Type, FinalOptions) -> TokenStream;
 type LastRenderFieldFn = fn(Ident, Type, FinalOptions) -> TokenStream;
 
@@ -168,8 +194,10 @@ const RENDER_GET: RenderFieldFn = |ident, ty, opts| {
         quote! { #val_ref #ty }
     };
 
+    let where_clause = mk_where(opts.bounds);
+
     quote! {
-        (#arg_ref self) -> #fn_return {
+        (#arg_ref self) -> #fn_return #where_clause {
             #val_ref self.#ident
         }
     }
@@ -184,8 +212,10 @@ const RENDER_GET_MUT: RenderFieldFn = |ident, ty, opts| {
         quote! { &mut #ty }
     };
 
+    let where_clause = mk_where(opts.bounds);
+
     quote! {
-        (&mut self) -> #fn_return {
+        (&mut self) -> #fn_return #where_clause {
             &mut self.#ident
         }
     }
@@ -201,9 +231,10 @@ const RENDER_SET: LastRenderFieldFn = |ident, ty, opts| {
     };
 
     let arg_ty = opts.ty.unwrap_or(ty);
+    let where_clause = mk_where(opts.bounds);
 
     quote! {
-        (#arg_ref mut self, new_value: #arg_ty) -> #self_ref Self {
+        (#arg_ref mut self, new_value: #arg_ty) -> #self_ref Self #where_clause {
             self.#ident = new_value;
             self
         }
