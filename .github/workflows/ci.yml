@@ -114,7 +114,6 @@ jobs:
         uses: ./.github/actions/prep-release
         with:
           release-type: ${{ steps.parse.outputs.release-type }}
-          version: ${{ steps.parse.outputs.next-version }}
       - name: Release
         if: ${{ steps.prep.outputs.in-sync }}
         uses: ./.github/actions/release
