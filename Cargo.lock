@@ -20,9 +20,9 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "macroific"
-version = "1.2.1"
+version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70cba02bc09bcec7545a03b6723f261ab350b4745de2b4c69d19d37dc1db4742"
+checksum = "a304d83e1ef544546dec28cafb9fcb72bfd281da112042d9279808b2ef6be600"
 dependencies = [
  "macroific_attr_parse",
  "macroific_core",
@@ -31,9 +31,9 @@ dependencies = [
 
 [[package]]
 name = "macroific_attr_parse"
-version = "1.2.1"
+version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9c53a2df001ecdd123a9e38b464320661fbf9abf730e666ad1196e896c92d99"
+checksum = "cd34ba6db76d16ae96fbb873ea972524d6b83577040e2758582217aaa2527546"
 dependencies = [
  "cfg-if",
  "proc-macro2",

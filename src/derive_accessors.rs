@@ -4,7 +4,7 @@ use proc_macro2::{Delimiter, Group, Ident, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
-use syn::{Attribute, DeriveInput, Generics, Token, Type, WherePredicate};
+use syn::{Attribute, DeriveInput, Generics, Token, Type};
 
 use options::*;
 use parsed_field::*;
@@ -84,12 +84,10 @@ impl ToTokens for DeriveAccessors {
 
         let mut out = {
             if !container_opts.bounds.is_empty() {
-                generics.make_where_clause().predicates.extend(
-                    container_opts
-                        .bounds
-                        .into_iter()
-                        .map(Into::<WherePredicate>::into),
-                );
+                generics
+                    .make_where_clause()
+                    .predicates
+                    .extend(container_opts.bounds);
             }
 
             let (g1, g2, g3) = generics.split_for_impl();

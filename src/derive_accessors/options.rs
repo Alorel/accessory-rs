@@ -1,12 +1,8 @@
 use macroific::prelude::*;
-use proc_macro2::{Ident, TokenStream};
-use quote::ToTokens;
+use proc_macro2::Ident;
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
-use syn::{
-    Error, Expr, GenericParam, LitStr, PredicateLifetime, PredicateType, Token, TypePath,
-    Visibility, WherePredicate,
-};
+use syn::{Error, Expr, LitStr, Token, Visibility, WherePredicate};
 
 #[derive(AttributeOptions)]
 #[cfg_attr(feature = "_debug", derive(Debug))]
@@ -16,7 +12,7 @@ pub struct ContainerOptions {
     pub set: bool,
 
     pub defaults: ContainerDefaults,
-    pub bounds: Punctuated<WhereParam, Token![,]>,
+    pub bounds: Punctuated<WherePredicate, Token![,]>,
 }
 
 #[derive(AttributeOptions)]
@@ -49,7 +45,7 @@ pub struct VariationOptions {
     pub prefix: Option<SkippableIdent>,
     pub suffix: Option<SkippableIdent>,
     pub vis: Option<Visibility>,
-    pub bounds: Punctuated<WhereParam, Token![,]>,
+    pub bounds: Punctuated<WherePredicate, Token![,]>,
 }
 
 #[derive(ParseOption, Default)]
@@ -61,7 +57,7 @@ pub struct VariationDefaults {
     pub prefix: Option<SkippableIdent>,
     pub suffix: Option<SkippableIdent>,
     pub vis: Option<Visibility>,
-    pub bounds: Punctuated<WhereParam, Token![,]>,
+    pub bounds: Punctuated<WherePredicate, Token![,]>,
 }
 
 impl FromExpr for VariationDefaults {
@@ -125,7 +121,7 @@ impl VariationOptions {
         }
     }
 
-    fn apply_default_bounds(&mut self, default_bounds: &Punctuated<WhereParam, Token![,]>) {
+    fn apply_default_bounds(&mut self, default_bounds: &Punctuated<WherePredicate, Token![,]>) {
         if self.bounds.is_empty() && !default_bounds.is_empty() {
             self.bounds = default_bounds.clone();
         }
@@ -210,66 +206,5 @@ impl ParseOption for SkippableIdent {
     #[inline]
     fn from_stream(input: ParseStream) -> syn::Result<Self> {
         input.parse()
-    }
-}
-
-#[derive(ParseOption, Clone)]
-#[cfg_attr(feature = "_debug", derive(Debug))]
-#[attr_opts(from_parse)]
-pub struct WhereParam {
-    p: WherePredicate,
-}
-
-impl TryFrom<GenericParam> for WhereParam {
-    type Error = Error;
-
-    fn try_from(param: GenericParam) -> syn::Result<Self> {
-        Ok(Self {
-            p: match param {
-                GenericParam::Type(param) => WherePredicate::Type(PredicateType {
-                    lifetimes: None,
-                    bounded_ty: syn::Type::Path(TypePath {
-                        qself: None,
-                        path: param.ident.into(),
-                    }),
-                    colon_token: param.colon_token.unwrap_or_default(),
-                    bounds: param.bounds,
-                }),
-                GenericParam::Lifetime(param) => WherePredicate::Lifetime(PredicateLifetime {
-                    lifetime: param.lifetime,
-                    colon_token: param.colon_token.unwrap_or_default(),
-                    bounds: param.bounds,
-                }),
-                GenericParam::Const(param) => {
-                    return Err(Error::new_spanned(param, "Const params not supported"));
-                }
-            },
-        })
-    }
-}
-
-impl Parse for WhereParam {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        input.parse::<GenericParam>()?.try_into()
-    }
-}
-
-impl FromExpr for WhereParam {
-    fn from_expr(expr: Expr) -> syn::Result<Self> {
-        GenericParam::from_expr(expr)?.try_into()
-    }
-}
-
-impl From<WhereParam> for WherePredicate {
-    #[inline]
-    fn from(value: WhereParam) -> Self {
-        value.p
-    }
-}
-
-impl ToTokens for WhereParam {
-    #[inline]
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.p.to_tokens(tokens);
     }
 }

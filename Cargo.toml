@@ -27,7 +27,7 @@ nightly = ["macroific/nightly"]
 proc-macro = true
 
 [dependencies]
-macroific = {version = "1.2.1", features = ["attr_parse", "full"]}
+macroific = {version = "1.2.2", features = ["attr_parse", "full"]}
 proc-macro2 = "1"
 syn = { version = "2"}
 quote = "1"
