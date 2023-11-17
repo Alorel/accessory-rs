@@ -1,6 +1,6 @@
 use macroific::elements::SimpleAttr;
 use macroific::prelude::*;
-use proc_macro2::{Delimiter, Group, Ident, TokenStream};
+use proc_macro2::{Delimiter, Group, Ident, Punct, TokenStream};
 use quote::{quote, ToTokens, TokenStreamExt};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
@@ -174,6 +174,13 @@ where
     }
 }
 
+fn resolve_ptr_ty(base: &Type, opt: Option<DerefKind>) -> &Type {
+    match (opt, base) {
+        (Some(_), Type::Ptr(ptr)) => &ptr.elem,
+        (_, ty) => ty,
+    }
+}
+
 type RenderFieldFn = fn(&Ident, &Type, FinalOptions) -> TokenStream;
 type LastRenderFieldFn = fn(Ident, Type, FinalOptions) -> TokenStream;
 
@@ -182,41 +189,59 @@ const RENDER_GET: RenderFieldFn = |ident, ty, opts| {
 
     let val_ref = if opts.cp || opts.owned {
         None
+    } else if let Some(deref) = opts.ptr_deref {
+        Some(
+            deref
+                .try_into_tokens()
+                .unwrap_or_else(move || Punct::new_joint('&').into_token_stream()),
+        )
     } else {
-        Some(<Token![&]>::default())
+        Some(Punct::new_joint('&').into_token_stream())
     };
 
     let fn_return = if let Some(ty) = opts.ty {
         ty.into_token_stream()
     } else {
+        let ty = resolve_ptr_ty(ty, opts.ptr_deref);
+
         quote! { #val_ref #ty }
     };
 
     let where_clause = mk_where(opts.bounds);
 
-    quote! {
-        (#arg_ref self) -> #fn_return #where_clause {
-            #val_ref self.#ident
-        }
-    }
+    let mut out = quote! { (#arg_ref self) -> #fn_return #where_clause };
+    out.append(Group::new(
+        Delimiter::Brace,
+        if opts.ptr_deref.is_some() {
+            quote! { unsafe { #val_ref *self.#ident } }
+        } else {
+            quote! { #val_ref self.#ident }
+        },
+    ));
+
+    out
 };
 const RENDER_GET_MUT: RenderFieldFn = |ident, ty, opts| {
-    #[cfg(feature = "_debug")]
-    println!("Getmutting {ident}: {} | {:?}", ty.to_token_stream(), opts);
-
     let fn_return = if let Some(ty) = opts.ty {
         ty.into_token_stream()
     } else {
+        let ty = resolve_ptr_ty(ty, opts.ptr_deref);
+
         quote! { &mut #ty }
     };
 
     let where_clause = mk_where(opts.bounds);
+    let mut out = quote! { (&mut self) -> #fn_return #where_clause };
+    out.append(Group::new(
+        Delimiter::Brace,
+        if opts.ptr_deref.is_some() {
+            quote! { unsafe { &mut *self.#ident } }
+        } else {
+            quote! { &mut self.#ident }
+        },
+    ));
 
-    quote! {
-        (&mut self) -> #fn_return #where_clause {
-            &mut self.#ident
-        }
-    }
+    out
 };
 
 const RENDER_SET: LastRenderFieldFn = |ident, ty, opts| {
@@ -228,12 +253,22 @@ const RENDER_SET: LastRenderFieldFn = |ident, ty, opts| {
         Some(quote! { &mut })
     };
 
-    let arg_ty = opts.ty.unwrap_or(ty);
+    let arg_ty = if let Some(ref ty) = opts.ty {
+        ty
+    } else {
+        resolve_ptr_ty(&ty, opts.ptr_deref)
+    };
+
     let where_clause = mk_where(opts.bounds);
+    let assignment = if opts.ptr_deref.is_some() {
+        quote! { unsafe { *self.#ident = new_value; } }
+    } else {
+        quote! { self.#ident = new_value }
+    };
 
     quote! {
         (#arg_ref mut self, new_value: #arg_ty) -> #self_ref Self #where_clause {
-            self.#ident = new_value;
+            #assignment;
             self
         }
     }

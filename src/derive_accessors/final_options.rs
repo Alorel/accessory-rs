@@ -3,7 +3,7 @@ use proc_macro2::Ident;
 use syn::punctuated::Punctuated;
 use syn::{Token, Visibility, WherePredicate};
 
-use super::options::SkippableIdent;
+use super::options::{DerefKind, SkippableIdent};
 use super::{VariationDefaults, VariationOptions};
 
 #[cfg_attr(feature = "_debug", derive(Debug))]
@@ -12,6 +12,7 @@ pub struct FinalOptions {
     pub const_fn: bool,
     pub skip: bool,
     pub cp: bool,
+    pub ptr_deref: Option<DerefKind>,
     pub vis: Visibility,
     pub prefix: Option<SkippableIdent>,
     pub suffix: Option<SkippableIdent>,
@@ -79,6 +80,7 @@ impl FinalOptions {
             const_fn: opts.const_fn.unwrap_or_default(),
             skip: opts.skip.unwrap_or_default(),
             cp: opts.cp.unwrap_or_default(),
+            ptr_deref: opts.ptr_deref,
             vis: opts
                 .vis
                 .unwrap_or_else(move || Visibility::Public(Default::default())),
