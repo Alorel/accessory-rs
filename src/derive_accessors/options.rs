@@ -1,5 +1,6 @@
 use macroific::prelude::*;
-use proc_macro2::Ident;
+use proc_macro2::{Ident, Punct, TokenStream};
+use quote::{quote, ToTokens};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::{Error, Expr, LitStr, Token, Visibility, WherePredicate};
@@ -41,6 +42,7 @@ pub struct VariationOptions {
     pub const_fn: Option<bool>,
     pub skip: Option<bool>,
     pub cp: Option<bool>,
+    pub ptr_deref: Option<DerefKind>,
     pub ty: Option<syn::Type>,
     pub prefix: Option<SkippableIdent>,
     pub suffix: Option<SkippableIdent>,
@@ -54,6 +56,7 @@ pub struct VariationDefaults {
     pub owned: Option<bool>,
     pub const_fn: Option<bool>,
     pub cp: Option<bool>,
+    pub ptr_deref: Option<DerefKind>,
     pub prefix: Option<SkippableIdent>,
     pub suffix: Option<SkippableIdent>,
     pub vis: Option<Visibility>,
@@ -64,7 +67,7 @@ impl FromExpr for VariationDefaults {
     fn from_expr(expr: Expr) -> syn::Result<Self> {
         Err(Error::new_spanned(
             expr,
-            "VariationDefaults can't be constructed this way",
+            "VariationDefaults can't be constructed from an expression",
         ))
     }
 }
@@ -76,6 +79,7 @@ impl From<&VariationDefaults> for VariationOptions {
             const_fn: defaults.const_fn,
             skip: None,
             cp: defaults.cp,
+            ptr_deref: defaults.ptr_deref,
             ty: None,
             prefix: defaults.prefix.clone(),
             suffix: defaults.suffix.clone(),
@@ -86,7 +90,7 @@ impl From<&VariationDefaults> for VariationOptions {
 }
 
 macro_rules! assign_defaults {
-    (cp $self: ident $from: ident => $($prop: ident),+) => {
+    (cp $from: ident on $self: ident => $($prop: ident),+ $(,)?) => {
         $(
             if $self.$prop.is_none() {
                 if let Some(default_val) = $from.$prop {
@@ -95,7 +99,7 @@ macro_rules! assign_defaults {
             }
         )+
     };
-    (clone $self: ident $from: ident => $($prop: ident),+) => {
+    (clone $from: ident on $self: ident => $($prop: ident),+ $(,)?) => {
         $(
             if $self.$prop.is_none() {
                 if let Some(ref default_val) = $from.$prop {
@@ -104,26 +108,78 @@ macro_rules! assign_defaults {
             }
         )+
     };
+    ($from: ident on $self: ident) => {
+        assign_defaults!(cp $from on $self => owned, const_fn, cp, ptr_deref);
+        assign_defaults!(clone $from on $self => prefix, suffix, vis);
+        $self.apply_default_bounds(&$from.bounds);
+    };
 }
 
 impl VariationOptions {
     pub fn assign_defaults_from_struct(&mut self, defaults: &VariationDefaults) {
-        assign_defaults!(cp self defaults => owned, const_fn, cp);
-        assign_defaults!(clone self defaults => prefix, suffix, vis);
-        self.apply_default_bounds(&defaults.bounds);
+        assign_defaults!(defaults on self);
     }
 
     pub fn assign_defaults_from_prop_all(&mut self, defaults: &Option<Self>) {
         if let Some(defaults) = defaults {
-            assign_defaults!(cp self defaults => owned, const_fn, cp);
-            assign_defaults!(clone self defaults => prefix, suffix, vis);
-            self.apply_default_bounds(&defaults.bounds);
+            assign_defaults!(defaults on self);
         }
     }
 
     fn apply_default_bounds(&mut self, default_bounds: &Punctuated<WherePredicate, Token![,]>) {
         if self.bounds.is_empty() && !default_bounds.is_empty() {
             self.bounds = default_bounds.clone();
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+#[cfg_attr(feature = "_debug", derive(Debug))]
+pub enum DerefKind {
+    Auto,
+    Deref,
+    DerefMut,
+}
+
+impl Parse for DerefKind {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        if input.is_empty() {
+            Ok(Self::Auto)
+        } else if input.peek(Token![mut]) {
+            input.parse::<Token![mut]>()?;
+            Ok(Self::DerefMut)
+        } else if input.peek(Token![ref]) {
+            input.parse::<Token![ref]>()?;
+            Ok(Self::Deref)
+        } else {
+            Err(input.error("Expected `mut`, `ref` or nothing"))
+        }
+    }
+}
+
+impl FromExpr for DerefKind {
+    fn from_expr(expr: Expr) -> syn::Result<Self> {
+        match expr {
+            Expr::Reference(expr) => Ok(if expr.mutability.is_some() {
+                Self::DerefMut
+            } else {
+                Self::Deref
+            }),
+            Expr::Verbatim(tokens) => syn::parse2(tokens),
+            other => Err(Error::new_spanned(
+                other,
+                "Expected `mut`, `ref` or nothing",
+            )),
+        }
+    }
+}
+
+impl DerefKind {
+    pub fn try_into_tokens(self) -> Option<TokenStream> {
+        match self {
+            Self::Auto => None,
+            Self::Deref => Some(Punct::new_joint('&').into_token_stream()),
+            Self::DerefMut => Some(quote! { &mut }),
         }
     }
 }
@@ -202,9 +258,17 @@ const _: () = {
     }
 };
 
-impl ParseOption for SkippableIdent {
-    #[inline]
-    fn from_stream(input: ParseStream) -> syn::Result<Self> {
-        input.parse()
-    }
+macro_rules! parse_opt {
+    ($($for: ty),+ $(,)?) => {
+        $(
+          impl ParseOption for $for {
+              #[inline]
+              fn from_stream(input: ParseStream) -> syn::Result<Self> {
+                  input.parse()
+              }
+          }
+        )+
+    };
 }
+
+parse_opt!(SkippableIdent, DerefKind);
