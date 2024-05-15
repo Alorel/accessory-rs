@@ -101,6 +101,7 @@ jobs:
           patch-types: |
             fix: Bug Fixes
             perf: Performance
+            ux: UX
           trivial-types: |
             chore: Maintenance
             deps: Dependency updates
