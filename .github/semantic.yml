@@ -9,6 +9,7 @@ types:
   - refactor
   - build
   - ci
+  - ux
   - chore
   - deps
   - perf
