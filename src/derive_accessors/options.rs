@@ -128,7 +128,7 @@ impl VariationOptions {
 
     fn apply_default_bounds(&mut self, default_bounds: &Punctuated<WherePredicate, Token![,]>) {
         if self.bounds.is_empty() && !default_bounds.is_empty() {
-            self.bounds = default_bounds.clone();
+            self.bounds.clone_from(default_bounds);
         }
     }
 }
@@ -241,7 +241,7 @@ const _: () = {
 
     impl<'a> SkippableIdent {
         #[inline]
-        pub fn as_suffix(&'a self) -> impl Display + Copy + Clone + 'a {
+        pub fn as_suffix(&'a self) -> impl Display + Copy + 'a {
             Renderer {
                 ident: self,
                 is_prefix: false,
@@ -249,7 +249,7 @@ const _: () = {
         }
 
         #[inline]
-        pub fn as_prefix(&'a self) -> impl Display + Copy + Clone + 'a {
+        pub fn as_prefix(&'a self) -> impl Display + Copy + 'a {
             Renderer {
                 ident: self,
                 is_prefix: true,

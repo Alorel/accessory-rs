@@ -56,7 +56,7 @@ impl ToTokens for DeriveAccessors {
                         &$opts.all,
                         &$container_opts.defaults.all,
                     ) {
-                        render_common(&mut $tokens, &$ident, &$comments, &opts);
+                        render_common(&mut $tokens, &$ident, &$comments, &opts, Some(SimpleAttr::new_outer("must_use")));
                         $tokens.extend($render(&$ident, &$ty, opts));
                     }
                 )+
@@ -69,7 +69,7 @@ impl ToTokens for DeriveAccessors {
                     &$opts.all,
                     &$container_opts.defaults.all,
                 ) {
-                    render_common(&mut $tokens, &$ident, &$comments, &opts);
+                    render_common(&mut $tokens, &$ident, &$comments, &opts, None);
                     $tokens.extend($last_render($ident, $ty, opts));
                 }
             };
@@ -131,9 +131,11 @@ fn render_common(
     ident: &Ident,
     comments: &[Attribute],
     opts: &FinalOptions,
+    must_use: Option<SimpleAttr>,
 ) {
     tokens.append_all(comments);
     SimpleAttr::INLINE.to_tokens(tokens);
+    must_use.to_tokens(tokens);
     opts.vis.to_tokens(tokens);
 
     if opts.const_fn {
