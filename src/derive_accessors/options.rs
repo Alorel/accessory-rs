@@ -213,11 +213,20 @@ impl Parse for SkippableIdent {
 }
 
 const _: () = {
+    use quote::IdentFragment;
     use std::fmt::{Display, Formatter, Result, Write};
+
     #[derive(Copy, Clone)]
     struct Renderer<'a> {
         ident: &'a SkippableIdent,
         is_prefix: bool,
+    }
+
+    impl IdentFragment for Renderer<'_> {
+        #[inline]
+        fn fmt(&self, f: &mut Formatter) -> Result {
+            Display::fmt(self, f)
+        }
     }
 
     impl Display for Renderer<'_> {
@@ -239,9 +248,9 @@ const _: () = {
         }
     }
 
-    impl<'a> SkippableIdent {
+    impl SkippableIdent {
         #[inline]
-        pub fn as_suffix(&'a self) -> impl Display + Copy + 'a {
+        pub fn as_suffix(&self) -> impl Display + IdentFragment + Copy + '_ {
             Renderer {
                 ident: self,
                 is_prefix: false,
@@ -249,7 +258,7 @@ const _: () = {
         }
 
         #[inline]
-        pub fn as_prefix(&'a self) -> impl Display + Copy + 'a {
+        pub fn as_prefix(&self) -> impl Display + IdentFragment + Copy + '_ {
             Renderer {
                 ident: self,
                 is_prefix: true,
