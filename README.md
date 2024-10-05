@@ -3,9 +3,9 @@
 A nice and configurable derive macro for getters & setters. See derive macro
 docs for full list of options
 
-[![MASTER CI status](https://github.com/Alorel/accessory-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/Alorel/accessory-rs/actions/workflows/ci.yml?query=branch%3Amaster)
+[![MASTER CI status](https://github.com/Alorel/accessory-rs/actions/workflows/test.yml/badge.svg)](https://github.com/Alorel/accessory-rs/actions/workflows/test.yml?query=branch%3Amaster)
 [![crates.io badge](https://img.shields.io/crates/v/accessory)](https://crates.io/crates/accessory)
-[![docs.rs badge](https://img.shields.io/docsrs/accessory?label=docs.rs)](https://docs.rs/accessory)
+[![Coverage Status](https://coveralls.io/repos/github/Alorel/accessory-rs/badge.svg?branch=master)](https://coveralls.io/github/Alorel/accessory-rs?branch=master)
 [![dependencies badge](https://img.shields.io/librariesio/release/cargo/accessory)](https://libraries.io/cargo/accessory)
 
 # Examples
@@ -220,13 +220,13 @@ sample struct and then we'll break it down field by field.
 #[access(get, get_mut, set, defaults(all(ptr_deref())))]
 struct NotUnsafeWhatsoever {
     direct: *mut String,
-    
+
     #[access(get(ty(&str)), get_mut(ty(&mut str)), set(skip))]
     retyped: *mut String,
-    
+
     #[access(get(ptr_deref(mut)), get_mut(skip), set(skip))]
     force_mutable: *mut NoImmutablesHere,
-    
+
     #[access(get(cp), get_mut(cp))]
     copy_field: *mut usize,
 }

@@ -1,7 +1,7 @@
-use macroific::elements::SimpleAttr;
+use macroific::elements::GenericImpl;
 use macroific::prelude::*;
-use proc_macro2::{Delimiter, Group, Ident, Punct, TokenStream};
-use quote::{quote, ToTokens, TokenStreamExt};
+use proc_macro2::{Delimiter, Group, Ident, TokenStream};
+use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::{Attribute, DeriveInput, Generics, Token, Type};
@@ -26,7 +26,7 @@ pub struct DeriveAccessors {
 
 impl ToTokens for DeriveAccessors {
     fn to_tokens(&self, _: &mut TokenStream) {
-        unimplemented!()
+        unimplemented!("Use `into_token_stream`")
     }
 
     fn into_token_stream(self) -> TokenStream
@@ -48,7 +48,7 @@ impl ToTokens for DeriveAccessors {
                 | [$last_lower: ident $last_upper: ident $last_render: ident]
             ) => {
                 $(
-                    if let Some(opts) = $final_opts::new(
+                    match $final_opts::new(
                         $container_opts.$lower,
                         &$container_opts.defaults.$lower,
                         &$naming::$upper,
@@ -56,12 +56,16 @@ impl ToTokens for DeriveAccessors {
                         &$opts.all,
                         &$container_opts.defaults.all,
                     ) {
-                        render_common(&mut $tokens, &$ident, &$comments, &opts, Some(SimpleAttr::new_outer("must_use")));
-                        $tokens.extend($render(&$ident, &$ty, opts));
+                        Some(opts) if !opts.skip => {
+                            let a = ::syn::parse_quote!(#[must_use]);
+                            render_common(&mut $tokens, &$ident, &$comments, &opts, Some(a));
+                            $tokens.extend($render(&$ident, &$ty, opts));
+                        },
+                        _ => {},
                     }
                 )+
 
-                if let Some(opts) = $final_opts::new(
+                match $final_opts::new(
                     $container_opts.$last_lower,
                     &$container_opts.defaults.$last_lower,
                     &$naming::$last_upper,
@@ -69,8 +73,11 @@ impl ToTokens for DeriveAccessors {
                     &$opts.all,
                     &$container_opts.defaults.all,
                 ) {
-                    render_common(&mut $tokens, &$ident, &$comments, &opts, None);
-                    $tokens.extend($last_render($ident, $ty, opts));
+                    Some(opts) if !opts.skip => {
+                        render_common(&mut $tokens, &$ident, &$comments, &opts, None);
+                        $tokens.extend($last_render($ident, $ty, opts));
+                    },
+                    _ => {},
                 }
             };
         }
@@ -90,27 +97,29 @@ impl ToTokens for DeriveAccessors {
                     .extend(container_opts.bounds);
             }
 
-            let (g1, g2, g3) = generics.split_for_impl();
+            let header = GenericImpl::new(generics).with_target(ident);
             quote! {
                 #[automatically_derived]
-                impl #g1 #ident #g2 #g3
+                #[allow(clippy::all)]
+                #header
             }
         };
-        drop(generics);
 
         out.append(Group::new(Delimiter::Brace, {
             let mut tokens = TokenStream::new();
 
-            for ParsedField {
-                comments,
-                opts,
-                ident,
-                ty,
-            } in fields
-            {
+            for field in fields {
+                let ParsedField {
+                    comments,
+                    opts,
+                    ident,
+                    ty,
+                } = field;
+
                 if opts.skip {
                     continue;
                 }
+
                 variations!(
                     [FinalOptions, container_opts, Naming, opts, tokens, ident, comments, ty] =>
                     [get GET RENDER_GET],
@@ -126,17 +135,21 @@ impl ToTokens for DeriveAccessors {
     }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn render_common(
     tokens: &mut TokenStream,
     ident: &Ident,
     comments: &[Attribute],
     opts: &FinalOptions,
-    must_use: Option<SimpleAttr>,
+    must_use: Option<Attribute>,
 ) {
-    tokens.append_all(comments);
-    SimpleAttr::INLINE.to_tokens(tokens);
-    must_use.to_tokens(tokens);
-    opts.vis.to_tokens(tokens);
+    let vis = &opts.vis;
+    tokens.extend(quote! {
+        #(#comments)*
+        #[inline]
+        #must_use
+        #vis
+    });
 
     if opts.const_fn {
         tokens.append(Ident::create("const"));
@@ -145,9 +158,9 @@ fn render_common(
     tokens.append(Ident::create("fn"));
 
     tokens.append(match (&opts.prefix, &opts.suffix) {
-        (Some(p), Some(s)) => Ident::create(&format!("{}{ident}{}", p.as_prefix(), s.as_suffix())),
-        (Some(p), None) => Ident::create(&format!("{}{ident}", p.as_prefix())),
-        (None, Some(s)) => Ident::create(&format!("{ident}{}", s.as_suffix())),
+        (Some(p), Some(s)) => format_ident!("{}{ident}{}", p.as_prefix(), s.as_suffix()),
+        (Some(p), None) => format_ident!("{}{ident}", p.as_prefix()),
+        (None, Some(s)) => format_ident!("{ident}{}", s.as_suffix()),
         (None, None) => ident.clone(),
     });
 }
@@ -162,17 +175,12 @@ fn arg_ref(owned: bool) -> Option<Token![&]> {
 
 fn mk_where<T, P>(bounds: Punctuated<T, P>) -> Option<TokenStream>
 where
-    T: ToTokens,
-    P: ToTokens,
+    Punctuated<T, P>: ToTokens,
 {
     if bounds.is_empty() {
         None
     } else {
-        let bounds = bounds.into_token_stream();
-        let mut out = TokenStream::new();
-        out.append(Ident::create("where"));
-        out.extend(bounds);
-        Some(out)
+        Some(quote!(where #bounds))
     }
 }
 
@@ -192,58 +200,47 @@ const RENDER_GET: RenderFieldFn = |ident, ty, opts| {
     let val_ref = if opts.cp || opts.owned {
         None
     } else if let Some(deref) = opts.ptr_deref {
-        Some(
-            deref
-                .try_into_tokens()
-                .unwrap_or_else(move || Punct::new_joint('&').into_token_stream()),
-        )
+        let tokens = deref.try_into_tokens().unwrap_or_else(move || quote!(&));
+        Some(tokens)
     } else {
-        Some(Punct::new_joint('&').into_token_stream())
+        Some(quote!(&))
     };
 
     let fn_return = if let Some(ty) = opts.ty {
         ty.into_token_stream()
     } else {
         let ty = resolve_ptr_ty(ty, opts.ptr_deref);
-
-        quote! { #val_ref #ty }
+        quote!(#val_ref #ty)
     };
 
     let where_clause = mk_where(opts.bounds);
 
-    let mut out = quote! { (#arg_ref self) -> #fn_return #where_clause };
-    out.append(Group::new(
-        Delimiter::Brace,
-        if opts.ptr_deref.is_some() {
-            quote! { unsafe { #val_ref *self.#ident } }
-        } else {
-            quote! { #val_ref self.#ident }
-        },
-    ));
+    let body = if opts.ptr_deref.is_some() {
+        quote!(unsafe { #val_ref *self.#ident })
+    } else {
+        quote!(#val_ref self.#ident)
+    };
 
-    out
+    quote!((#arg_ref self) -> #fn_return #where_clause { #body })
 };
+
 const RENDER_GET_MUT: RenderFieldFn = |ident, ty, opts| {
     let fn_return = if let Some(ty) = opts.ty {
         ty.into_token_stream()
     } else {
         let ty = resolve_ptr_ty(ty, opts.ptr_deref);
-
-        quote! { &mut #ty }
+        quote!(&mut #ty)
     };
 
     let where_clause = mk_where(opts.bounds);
-    let mut out = quote! { (&mut self) -> #fn_return #where_clause };
-    out.append(Group::new(
-        Delimiter::Brace,
-        if opts.ptr_deref.is_some() {
-            quote! { unsafe { &mut *self.#ident } }
-        } else {
-            quote! { &mut self.#ident }
-        },
-    ));
 
-    out
+    let body = if opts.ptr_deref.is_some() {
+        quote!(unsafe { &mut *self.#ident })
+    } else {
+        quote!(&mut self.#ident)
+    };
+
+    quote!((&mut self) -> #fn_return #where_clause { #body })
 };
 
 const RENDER_SET: LastRenderFieldFn = |ident, ty, opts| {
@@ -252,7 +249,7 @@ const RENDER_SET: LastRenderFieldFn = |ident, ty, opts| {
     let self_ref = if opts.cp || opts.owned {
         None
     } else {
-        Some(quote! { &mut })
+        Some(quote!(&mut))
     };
 
     let arg_ty = if let Some(ref ty) = opts.ty {
@@ -262,6 +259,7 @@ const RENDER_SET: LastRenderFieldFn = |ident, ty, opts| {
     };
 
     let where_clause = mk_where(opts.bounds);
+
     let assignment = if opts.ptr_deref.is_some() {
         quote! { unsafe { *self.#ident = new_value; } }
     } else {
@@ -293,7 +291,7 @@ impl Parse for DeriveAccessors {
             .map(ParsedField::try_from);
 
         Ok(Self {
-            fields: macroific::attr_parse::__private::try_collect(fields)?,
+            fields: fields.collect::<syn::Result<_>>()?,
             container_opts,
             ident,
             generics,
