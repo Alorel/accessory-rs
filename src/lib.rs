@@ -359,6 +359,44 @@
 //!
 //! </details>
 //!
+//! <details><summary>Calling as_ref on Option fields</summary>
+//!
+//! Combine the `as_ref` & `ty` options to `Option<&T>` instead of `&Option<T>`. Has no effect on `set`.
+//!
+//! ```
+//! # use accessory::Accessors;
+//! #
+//! #[derive(Accessors, Default)]
+//! struct Container {
+//!     #[access(set, get(as_ref, ty(Option<&String>)), get_mut(as_ref, ty(Option<&mut String>)))]
+//!     opt: Option<String>,
+//! }
+//!
+//! let mut c = Container::default();
+//!
+//! c.set_opt(Some("foo".into()));
+//! assert_eq!(c.opt(), Some(&String::from("foo")));
+//!
+//! *c.opt_mut().unwrap() = "bar".into();
+//! assert_eq!(c.opt(), Some(&String::from("bar")));
+//! ```
+//!
+//! Generated code:
+//!
+#![cfg_attr(doctest, doc = " ````no_test")]
+//! ```
+//! impl Container {
+//!     pub fn opt(&self) -> Option<&String> { self.opt.as_ref() }
+//!     pub fn opt_mut(&mut self) -> Option<&mut String> { self.opt.as_mut() }
+//!     pub fn set_opt(&mut self, new_value: Option<String>) -> &mut Self {
+//!         self.opt = new_value;
+//!         self
+//!     }
+//! }
+//! ````
+//!
+//! </details>
+//!
 
 #![deny(clippy::correctness, clippy::suspicious)]
 #![warn(clippy::complexity, clippy::perf, clippy::style, clippy::pedantic)]
@@ -386,6 +424,7 @@ use quote::ToTokens;
 /// | `const_fn` | Make the accessor a const fn |
 /// | `owned` | Make the accessor take `self` instead of `&self`. Ignored on `get_mut` |
 /// | `cp` | Treat the accessor as a copy type. If not set, it will be treated as a reference. Ignored on `get_mut` |
+/// | `as_ref` | Call [`as_ref()`](AsRef::as_ref) on the field. Ignored on `set`. Combine with `ty` to return [`Option`] refs. |
 /// | `skip` | Skip this accessor |
 /// | `ptr_deref()` | Dereference this raw pointer when getting/setting it. Can be passed an empty arg `()` to automatically determine `&` or `&mut` referencing based on context or pass `(mut)` inside a `get` to force resolve to a mutable reference. See "Dereferencing raw pointers" example in [crate-level docs](crate) for more info. |
 /// | `vis(visibility)` | Set the visibility of the accessor. Defaults to public. |

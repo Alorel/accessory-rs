@@ -53,7 +53,7 @@ impl ToTokens for DeriveAccessors {
                         &$container_opts.defaults.$lower,
                         &$naming::$upper,
                         $opts.$lower,
-                        &$opts.all,
+                        $opts.all.as_ref(),
                         &$container_opts.defaults.all,
                     ) {
                         Some(opts) if !opts.skip => {
@@ -70,7 +70,7 @@ impl ToTokens for DeriveAccessors {
                     &$container_opts.defaults.$last_lower,
                     &$naming::$last_upper,
                     $opts.$last_lower,
-                    &$opts.all,
+                    $opts.all.as_ref(),
                     &$container_opts.defaults.all,
                 ) {
                     Some(opts) if !opts.skip => {
@@ -197,7 +197,7 @@ type LastRenderFieldFn = fn(Ident, Type, FinalOptions) -> TokenStream;
 const RENDER_GET: RenderFieldFn = |ident, ty, opts| {
     let arg_ref = arg_ref(opts.owned);
 
-    let val_ref = if opts.cp || opts.owned {
+    let val_ref = if opts.cp || opts.owned || opts.as_ref {
         None
     } else if let Some(deref) = opts.ptr_deref {
         let tokens = deref.try_into_tokens().unwrap_or_else(move || quote!(&));
@@ -217,6 +217,8 @@ const RENDER_GET: RenderFieldFn = |ident, ty, opts| {
 
     let body = if opts.ptr_deref.is_some() {
         quote!(unsafe { #val_ref *self.#ident })
+    } else if opts.as_ref {
+        quote!(self.#ident.as_ref())
     } else {
         quote!(#val_ref self.#ident)
     };
@@ -234,7 +236,9 @@ const RENDER_GET_MUT: RenderFieldFn = |ident, ty, opts| {
 
     let where_clause = mk_where(opts.bounds);
 
-    let body = if opts.ptr_deref.is_some() {
+    let body = if opts.as_ref {
+        quote!(self.#ident.as_mut())
+    } else if opts.ptr_deref.is_some() {
         quote!(unsafe { &mut *self.#ident })
     } else {
         quote!(&mut self.#ident)

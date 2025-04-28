@@ -42,6 +42,7 @@ pub struct VariationOptions {
     pub const_fn: Option<bool>,
     pub skip: Option<bool>,
     pub cp: Option<bool>,
+    pub as_ref: Option<bool>,
     pub ptr_deref: Option<DerefKind>,
     pub ty: Option<syn::Type>,
     pub prefix: Option<SkippableIdent>,
@@ -56,6 +57,7 @@ pub struct VariationDefaults {
     pub owned: Option<bool>,
     pub const_fn: Option<bool>,
     pub cp: Option<bool>,
+    pub as_ref: Option<bool>,
     pub ptr_deref: Option<DerefKind>,
     pub prefix: Option<SkippableIdent>,
     pub suffix: Option<SkippableIdent>,
@@ -79,6 +81,7 @@ impl From<&VariationDefaults> for VariationOptions {
             const_fn: defaults.const_fn,
             skip: None,
             cp: defaults.cp,
+            as_ref: defaults.as_ref,
             ptr_deref: defaults.ptr_deref,
             ty: None,
             prefix: defaults.prefix.clone(),
@@ -120,7 +123,7 @@ impl VariationOptions {
         assign_defaults!(defaults on self);
     }
 
-    pub fn assign_defaults_from_prop_all(&mut self, defaults: &Option<Self>) {
+    pub fn assign_defaults_from_prop_all(&mut self, defaults: Option<&Self>) {
         if let Some(defaults) = defaults {
             assign_defaults!(defaults on self);
         }

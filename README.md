@@ -348,4 +348,39 @@ Finally, `copy` field is marked with `cp` and will not be returning a reference 
 
 </details>
 
+<details><summary>Calling as_ref on Option fields</summary>
+
+Combine the `as_ref` & `ty` options to `Option<&T>` instead of `&Option<T>`. Has no effect on `set`.
+
+```rust
+#[derive(Accessors, Default)]
+struct Container {
+    #[access(set, get(as_ref, ty(Option<&String>)), get_mut(as_ref, ty(Option<&mut String>)))]
+    opt: Option<String>,
+}
+
+let mut c = Container::default();
+
+c.set_opt(Some("foo".into()));
+assert_eq!(c.opt(), Some(&String::from("foo")));
+
+*c.opt_mut().unwrap() = "bar".into();
+assert_eq!(c.opt(), Some(&String::from("bar")));
+```
+
+Generated code:
+
+```rust
+impl Container {
+    pub fn opt(&self) -> Option<&String> { self.opt.as_ref() }
+    pub fn opt_mut(&mut self) -> Option<&mut String> { self.opt.as_mut() }
+    pub fn set_opt(&mut self, new_value: Option<String>) -> &mut Self {
+        self.opt = new_value;
+        self
+    }
+}
+````
+
+</details>
+
 <!-- cargo-rdme end -->
