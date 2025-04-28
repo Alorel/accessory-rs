@@ -6,7 +6,7 @@ rust-version = "1.71.0"
 authors = [
   "Art <amolc@pm.me>",
 ]
-license = "Apache-2.0"
+license = "MIT OR Apache-2.0"
 readme = "README.md"
 
 description = "A configurable get/set/get_mut derive macro"
