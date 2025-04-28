@@ -15,13 +15,13 @@ runs:
       uses: alorel-actions/git-ident@v1
 
     - name: Init toolchain
-      uses: alorel-actions/cargo/init@v1
+      uses: alorel-actions/cargo/init@v2
       id: toolchain
       with:
         cache-prefix: release
 
     - name: cargo-bump
-      uses: alorel-actions/cargo/bump@v1
+      uses: alorel-actions/cargo/bump@v2
       with:
         release-type: ${{ inputs.release-type }}
 
