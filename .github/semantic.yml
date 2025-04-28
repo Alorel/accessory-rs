@@ -12,6 +12,9 @@ types:
   - ux
   - chore
   - deps
+  - test
+  - tests
   - perf
+  - rm
 scopes:
   - dev
