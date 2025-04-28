@@ -12,6 +12,7 @@ pub struct FinalOptions {
     pub const_fn: bool,
     pub skip: bool,
     pub cp: bool,
+    pub as_ref: bool,
     pub ptr_deref: Option<DerefKind>,
     pub vis: Visibility,
     pub prefix: Option<SkippableIdent>,
@@ -47,7 +48,7 @@ impl FinalOptions {
         defaults_from_struct: &VariationDefaults,
         defaults_for_variation: &'static Naming,
         opts: Option<VariationOptions>,
-        opts_all_field: &Option<VariationOptions>,
+        opts_all_field: Option<&VariationOptions>,
         opts_all_container: &VariationDefaults,
     ) -> Option<Self> {
         let mut opts = match (enable_by_default, opts) {
@@ -80,6 +81,7 @@ impl FinalOptions {
             const_fn: opts.const_fn.unwrap_or_default(),
             skip: opts.skip.unwrap_or_default(),
             cp: opts.cp.unwrap_or_default(),
+            as_ref: opts.as_ref.unwrap_or_default(),
             ptr_deref: opts.ptr_deref,
             vis: opts
                 .vis
