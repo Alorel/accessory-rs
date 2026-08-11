@@ -9,12 +9,8 @@ types:
   - refactor
   - build
   - ci
-  - ux
   - chore
   - deps
-  - test
-  - tests
   - perf
-  - rm
 scopes:
   - dev
