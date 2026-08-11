@@ -26,9 +26,9 @@ _debug = ["syn/extra-traits"]
 proc-macro = true
 
 [dependencies]
-macroific = {version = "2", features = ["attr_parse", "full"]}
+macroific = { version = "3", features = ["attr_parse", "full"] }
 proc-macro2 = "1"
-syn = { version = "2"}
+syn = { version = "3" }
 quote = "1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
