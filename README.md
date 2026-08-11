@@ -1,6 +1,6 @@
 <!-- cargo-rdme start -->
 
-A nice and configurable derive macro for getters & setters. See derive macro
+A nice and configurable derive macro for getters & setters. See [derive macro](https://docs.rs/accessory/latest/accessory/derive.Accessors.html)
 docs for full list of options
 
 [![MASTER CI status](https://github.com/Alorel/accessory-rs/actions/workflows/test.yml/badge.svg)](https://github.com/Alorel/accessory-rs/actions/workflows/test.yml?query=branch%3Amaster)
